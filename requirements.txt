@@ -12,5 +12,5 @@ pydub
 streamlit-option-menu
 opencv-python-headless
 twilio
-
-
+torch
+torchvision
