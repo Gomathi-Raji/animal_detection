@@ -7,7 +7,12 @@ import pandas as pd
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
-import sounddevice as sd
+try:
+    import sounddevice as sd
+    SOUNDDEVICE_AVAILABLE = True
+except OSError:
+    sd = None
+    SOUNDDEVICE_AVAILABLE = False
 import soundfile as sf
 import tempfile
 import time
@@ -631,6 +636,9 @@ def predict_with_filters(features, model, metadata, selected_categories, selecte
     }
     
 def record_audio(duration=5, fs=22050):
+    if not SOUNDDEVICE_AVAILABLE:
+        st.error("🚫 Microphone recording is not available (PortAudio library not found). Please upload an audio file instead.")
+        return None
     st.write("🎙️ Recording...")
     progress_bar = st.progress(0)
     
@@ -1038,65 +1046,68 @@ if app_mode == "Classify Audio":
                     st.warning(f"Could not read audio info: {e}")
         else:
             # Fallback: Use sounddevice for direct recording
-            st.warning("Browser-based recorder not available. Using direct microphone recording.")
+            if not SOUNDDEVICE_AVAILABLE:
+                st.warning("🚫 Microphone recording is not available in this environment. Please upload an audio file instead.")
+            else:
+                st.warning("Browser-based recorder not available. Using direct microphone recording.")
             
-            if 'recording_state' not in st.session_state:
-                st.session_state.recording_state = False
-            if 'recorded_audio' not in st.session_state:
-                st.session_state.recorded_audio = None
-            
-            col_rec1, col_rec2 = st.columns(2)
-            
-            with col_rec1:
-                if st.button("🔴 Start Recording", disabled=st.session_state.recording_state):
-                    st.session_state.recording_state = True
-                    st.info(f"🎙️ Recording for {recording_duration} seconds...")
-                    
-                    # Progress bar for recording
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-                    
-                    try:
-                        # Record audio using sounddevice
-                        recorded_audio = sd.rec(
-                            int(recording_duration * sample_rate),
-                            samplerate=sample_rate,
-                            channels=1,
-                            dtype='float32'
-                        )
-                        
-                        # Show progress
-                        for i in range(recording_duration * 10):
-                            time.sleep(0.1)
-                            progress_bar.progress((i + 1) / (recording_duration * 10))
-                            status_text.text(f"Recording... {(i + 1) / 10:.1f}s / {recording_duration}s")
-                        
-                        sd.wait()  # Wait for recording to complete
-                        
-                        # Save to temporary file
-                        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
-                            sf.write(tmp_file.name, recorded_audio, sample_rate)
-                            st.session_state.audio_file = tmp_file.name
-                            st.session_state.recorded_audio = recorded_audio
-                        
-                        progress_bar.progress(1.0)
-                        status_text.text("")
-                        st.success("✅ Recording completed!")
-                        st.audio(st.session_state.audio_file, format='audio/wav')
-                        st.info(f"📊 Recording Info: Duration: {recording_duration}s | Sample Rate: {sample_rate} Hz")
-                        
-                    except Exception as e:
-                        st.error(f"Recording failed: {e}")
-                        st.info("💡 Make sure your microphone is connected and browser has permission to access it.")
-                    finally:
-                        st.session_state.recording_state = False
-            
-            with col_rec2:
-                if st.button("🗑️ Clear Recording"):
-                    st.session_state.audio_file = None
+                if 'recording_state' not in st.session_state:
+                    st.session_state.recording_state = False
+                if 'recorded_audio' not in st.session_state:
                     st.session_state.recorded_audio = None
-                    st.session_state.features = None
-                    st.rerun()       
+            
+                col_rec1, col_rec2 = st.columns(2)
+            
+                with col_rec1:
+                    if st.button("🔴 Start Recording", disabled=st.session_state.recording_state):
+                        st.session_state.recording_state = True
+                        st.info(f"🎙️ Recording for {recording_duration} seconds...")
+                    
+                        # Progress bar for recording
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                    
+                        try:
+                            # Record audio using sounddevice
+                            recorded_audio = sd.rec(
+                                int(recording_duration * sample_rate),
+                                samplerate=sample_rate,
+                                channels=1,
+                                dtype='float32'
+                            )
+                        
+                            # Show progress
+                            for i in range(recording_duration * 10):
+                                time.sleep(0.1)
+                                progress_bar.progress((i + 1) / (recording_duration * 10))
+                                status_text.text(f"Recording... {(i + 1) / 10:.1f}s / {recording_duration}s")
+                        
+                            sd.wait()  # Wait for recording to complete
+                        
+                            # Save to temporary file
+                            with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
+                                sf.write(tmp_file.name, recorded_audio, sample_rate)
+                                st.session_state.audio_file = tmp_file.name
+                                st.session_state.recorded_audio = recorded_audio
+                        
+                            progress_bar.progress(1.0)
+                            status_text.text("")
+                            st.success("✅ Recording completed!")
+                            st.audio(st.session_state.audio_file, format='audio/wav')
+                            st.info(f"📊 Recording Info: Duration: {recording_duration}s | Sample Rate: {sample_rate} Hz")
+                        
+                        except Exception as e:
+                            st.error(f"Recording failed: {e}")
+                            st.info("💡 Make sure your microphone is connected and browser has permission to access it.")
+                        finally:
+                            st.session_state.recording_state = False
+            
+                with col_rec2:
+                    if st.button("🗑️ Clear Recording"):
+                        st.session_state.audio_file = None
+                        st.session_state.recorded_audio = None
+                        st.session_state.features = None
+                        st.rerun()       
             
     def get_plot_bytes(fig):
         img_bytes = io.BytesIO()
