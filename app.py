@@ -7,7 +7,12 @@ import pandas as pd
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
-import sounddevice as sd
+try:
+    import sounddevice as sd
+    SOUNDDEVICE_AVAILABLE = True
+except (OSError, ImportError):
+    sd = None
+    SOUNDDEVICE_AVAILABLE = False
 import soundfile as sf
 import tempfile
 import time
@@ -631,6 +636,9 @@ def predict_with_filters(features, model, metadata, selected_categories, selecte
     }
     
 def record_audio(duration=5, fs=22050):
+    if not SOUNDDEVICE_AVAILABLE:
+        st.error("🎙️ Microphone recording is unavailable: PortAudio library not found. Please install `libportaudio2`.")
+        return None
     st.write("🎙️ Recording...")
     progress_bar = st.progress(0)
     
@@ -1057,6 +1065,8 @@ if app_mode == "Classify Audio":
                     status_text = st.empty()
                     
                     try:
+                        if not SOUNDDEVICE_AVAILABLE:
+                            raise OSError("PortAudio library not found. Please install libportaudio2.")
                         # Record audio using sounddevice
                         recorded_audio = sd.rec(
                             int(recording_duration * sample_rate),
