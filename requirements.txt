@@ -1,12 +1,12 @@
 streamlit
 python-dotenv
-numpy
+numpy<2.0
 pandas
 librosa
 matplotlib
 sounddevice
 soundfile
-tensorflow
+tensorflow-cpu==2.15.1
 plotly
 Pillow
 pydub
