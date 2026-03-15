@@ -1,11 +1,12 @@
 streamlit
-numpy
+python-dotenv
+numpy<2.0
 pandas
 librosa
 matplotlib
 sounddevice
 soundfile
-tensorflow
+tensorflow-cpu==2.15.1
 plotly
 Pillow
 pydub
@@ -14,3 +15,6 @@ opencv-python-headless
 twilio
 torch
 torchvision
+ultralytics
+tqdm
+seaborn
